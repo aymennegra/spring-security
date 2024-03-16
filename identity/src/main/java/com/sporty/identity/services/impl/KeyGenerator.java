@@ -3,6 +3,9 @@ package com.sporty.identity.services.impl;
 import java.security.SecureRandom;
 import java.util.Base64;
 
+/**
+ * class to generate SigninKey
+ */
 public class KeyGenerator {
 
     public static void main(String[] args) {

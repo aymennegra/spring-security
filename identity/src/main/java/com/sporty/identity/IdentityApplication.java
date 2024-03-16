@@ -21,7 +21,7 @@ public class IdentityApplication implements CommandLineRunner {
 	}
 
 	@Override
-	public void run(String... args) throws Exception {
+	public void run(String... args) {
 		User adminAccount = userRepository.findByRole(Role.ADMIN);
 		if (null == adminAccount){
 			User user = new User();

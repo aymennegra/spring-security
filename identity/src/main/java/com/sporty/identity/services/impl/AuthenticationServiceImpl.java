@@ -4,6 +4,8 @@ import com.sporty.identity.dto.dtoRequests.RefreshTokenRequest;
 import com.sporty.identity.dto.dtoResponses.JwtAuthenticationResponse;
 import com.sporty.identity.dto.dtoRequests.SignInRequest;
 import com.sporty.identity.dto.dtoRequests.SignUpRequest;
+import com.sporty.identity.dto.dtoResponses.SignInResponse;
+import com.sporty.identity.dto.dtoResponses.SignUpResponse;
 import com.sporty.identity.entities.Role;
 import com.sporty.identity.entities.User;
 import com.sporty.identity.repository.UserRepository;
@@ -14,9 +16,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.util.HashMap;
-
 @Service
 @RequiredArgsConstructor
 public class AuthenticationServiceImpl implements AuthenticationService {
@@ -27,28 +26,32 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final JWTService jwtService;
 
 
-    public User signup(SignUpRequest signUpRequest) {
+    public SignUpResponse signup(SignUpRequest signUpRequest) {
         User user = new User();
-
         user.setEmail(signUpRequest.getEmail());
         user.setFirstname(signUpRequest.getFirstname());
         user.setLastname(signUpRequest.getLastname());
         user.setRole(Role.USER);
         user.setPassword(passwordEncoder.encode(signUpRequest.getPassword()));
-        return userRepository.save(user);
+        userRepository.save(user);
+        SignUpResponse signUpResponse = new SignUpResponse();
+        signUpResponse.setFirstname(signUpRequest.getFirstname());
+        signUpResponse.setLastname(signUpRequest.getLastname());
+        signUpResponse.setEmail(signUpRequest.getEmail());
+        return signUpResponse;
     }
 
-    public JwtAuthenticationResponse signin (SignInRequest signInRequest) {
+    public SignInResponse signin (SignInRequest signInRequest) {
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken
                 (signInRequest.getEmail(), signInRequest.getPassword()));
 
         var user = userRepository.findByEmail(signInRequest.getEmail()).orElseThrow(() -> new IllegalArgumentException("Invalid Email or Password"));
         var jwt = jwtService.generateToken(user);
-        var refreshToken = jwtService.generateRefreshToken(new HashMap<>(),user);
+       // var refreshToken = jwtService.generateRefreshToken(new HashMap<>(),user);
 
-        JwtAuthenticationResponse jwtAuthenticationResponse = new JwtAuthenticationResponse();
+        SignInResponse jwtAuthenticationResponse = new SignInResponse();
         jwtAuthenticationResponse.setToken(jwt);
-        jwtAuthenticationResponse.setRefreshToken(refreshToken);
+        jwtAuthenticationResponse.setEmail(user.getEmail());
 
         return jwtAuthenticationResponse;
 
@@ -60,8 +63,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         if (jwtService.isTokenValid(refreshTokenRequest.getToken(),user)){
             var jwt = jwtService.generateToken(user);
             JwtAuthenticationResponse jwtAuthenticationResponse = new JwtAuthenticationResponse();
-            jwtAuthenticationResponse.setToken(jwt);
-            jwtAuthenticationResponse.setRefreshToken(refreshTokenRequest.getToken());
+            jwtAuthenticationResponse.setRefreshToken(jwt);
 
             return jwtAuthenticationResponse;
 
