@@ -1,6 +1,5 @@
 package com.sporty.identity.config;
 
-
 import com.sporty.identity.services.JWTService;
 import com.sporty.identity.services.UserService;
 import jakarta.servlet.FilterChain;
@@ -16,7 +15,6 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.IOException;
 
 @Component
