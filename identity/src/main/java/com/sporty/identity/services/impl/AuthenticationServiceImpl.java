@@ -37,12 +37,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         Optional<User> existingUserOptional = userRepository.findByEmail(signUpRequest.getEmail());
         // Check if a user with the provided phone number already exists
         Optional<User> existingUserByPhone = userRepository.findByPhone(signUpRequest.getPhone());
-        if (existingUserByPhone.isPresent()) {
-            // User with the provided phone already exists
-            return ResponseHandler.responseBuilder("User with phone number " + signUpRequest.getPhone() + " already exists", HttpStatus.UNAUTHORIZED, new ArrayList<>());
-        } else if (existingUserOptional.isPresent()) {
+        if  (existingUserOptional.isPresent()){
             // User with the provided email already exists
             return ResponseHandler.responseBuilder("User with email " + signUpRequest.getEmail() + " already exists", HttpStatus.UNAUTHORIZED, new ArrayList<>());
+        } else if (existingUserByPhone.isPresent()) {
+            // User with the provided phone already exists
+            return ResponseHandler.responseBuilder("User with phone number " + signUpRequest.getPhone() + " already exists", HttpStatus.UNAUTHORIZED, new ArrayList<>());
         } else {//ResponseHandler.responseBuilder("Unauthorized", HttpStatus.UNAUTHORIZED, new ArrayList<>());
             // Create a new user
             try {
