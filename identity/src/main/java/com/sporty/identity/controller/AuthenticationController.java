@@ -25,34 +25,16 @@ public class AuthenticationController {
 
     @PostMapping("/signup")
     public ResponseEntity<Object> signup(@RequestBody SignUpRequest signUpRequest) {
-        try {
-            return ResponseHandler.responseBuilder("user created", HttpStatus.OK,
-                    authenticationService.signup(signUpRequest));
-        } catch (Exception e) {
-            // If an exception occurs, return unauthorized response
-            return ResponseHandler.responseBuilder("Unauthorized", HttpStatus.UNAUTHORIZED, new ArrayList<>());
-        }
+        return authenticationService.signup(signUpRequest);
     }
 
     @PostMapping("/signin")
     public ResponseEntity<Object> signin(@RequestBody SignInRequest signInRequest) {
-        try {
-            return ResponseHandler.responseBuilder("Connected successfully", HttpStatus.OK,
-                    authenticationService.signin(signInRequest));
-        } catch (Exception e) {
-            // If an exception occurs, return unauthorized response
-            return ResponseHandler.responseBuilder("Invalid Email or Password", HttpStatus.UNAUTHORIZED, new ArrayList<>());
-        }
+        return authenticationService.signin(signInRequest);
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<Object> refresh(@RequestBody RefreshTokenRequest refreshTokenRequest) {
-        try {
-            return ResponseHandler.responseBuilder("Token refreshed successfully", HttpStatus.OK,
-                    authenticationService.refreshToken(refreshTokenRequest));
-        } catch (Exception e) {
-            // If an exception occurs, return unauthorized response
-            return ResponseHandler.responseBuilder("Unauthorized", HttpStatus.UNAUTHORIZED, new ArrayList<>());
-        }
+        return authenticationService.refreshToken(refreshTokenRequest);
     }
 }

@@ -1,17 +1,21 @@
 package com.sporty.identity.services.impl;
 
 import com.sporty.identity.dto.dtoRequests.UserProfileRequest;
+import com.sporty.identity.dto.dtoResponses.ResponseHandler;
 import com.sporty.identity.dto.dtoResponses.UserProfileResponse;
 import com.sporty.identity.entities.User;
 import com.sporty.identity.repository.UserRepository;
 import com.sporty.identity.services.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import java.util.ArrayList;
 
 @Service
 @RequiredArgsConstructor
@@ -29,55 +33,64 @@ public class UserServiceImpl implements UserService {
         };
     }
 
-    public UserProfileResponse getUserProfile() {
-        // Retrieve the currently authenticated user's details from the security context
+    public ResponseEntity<Object> getUserProfile() {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        // Check if a user with the provided email already exists
+            try {// Retrieve the currently authenticated user's details from the security context
+                // Check if the user exists in the database based on the email (assuming email is the username)
+                User user = userRepository.findByEmail(userDetails.getUsername())
+                        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                // Construct UserProfileResponse from user details
+                UserProfileResponse userProfileResponse = new UserProfileResponse();
+                userProfileResponse.setId(String.valueOf(user.getId()));
+                userProfileResponse.setFirstname(user.getFirstname());
+                userProfileResponse.setLastname(user.getLastname());
+                userProfileResponse.setEmail(user.getEmail());
+                userProfileResponse.setPhone(user.getPhone());
+                // Add other profile information as needed
+                return ResponseHandler.responseBuilder("User found", HttpStatus.OK,
+                        userProfileResponse);
+            }catch (Exception e){
+                return ResponseHandler.responseBuilder("User not found", HttpStatus.UNAUTHORIZED,
+                        new ArrayList<>());
+            }
+        }
 
-        // Check if the user exists in the database based on the email (assuming email is the username)
-        User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    public ResponseEntity<Object> updateUserProfile(UserProfileRequest userProfileRequest) {
+        try {// Retrieve the currently authenticated user's details from the security context
+            UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-        // Construct UserProfileResponse from user details
-        UserProfileResponse userProfileResponse = new UserProfileResponse();
-        userProfileResponse.setId(String.valueOf(user.getId()));
-        userProfileResponse.setFirstname(user.getFirstname());
-        userProfileResponse.setLastname(user.getLastname());
-        userProfileResponse.setEmail(user.getEmail());
-        userProfileResponse.setPhone(user.getPhone());
-        // Add other profile information as needed
-        return userProfileResponse;
+            // Check if the user exists in the database based on the email (assuming email is the username)
+            User user = userRepository.findByEmail(userDetails.getUsername())
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+            // Update user information with the data from the userProfileRequest
+            user.setFirstname(userProfileRequest.getFirstname());
+            user.setLastname(userProfileRequest.getLastname());
+            user.setEmail(userProfileRequest.getEmail());
+            user.setPhone(userProfileRequest.getPhone());
+            user.setPassword(userProfileRequest.getPassword());
+            user.setPassword(new BCryptPasswordEncoder().encode(userProfileRequest.getPassword()));
+            // Update other user information as needed
+
+            // Save the updated user entity
+            userRepository.save(user);
+
+            // Construct and return a UserProfileResponse with updated user information
+            UserProfileResponse userProfileResponse = new UserProfileResponse();
+            userProfileResponse.setFirstname(user.getFirstname());
+            userProfileResponse.setLastname(user.getLastname());
+            userProfileResponse.setEmail(user.getEmail());
+            userProfileResponse.setPhone(user.getPhone());
+            // Add other profile information as needed
+            return ResponseHandler.responseBuilder("User Edited", HttpStatus.OK,
+                    userProfileResponse);
+        }
+        catch (Exception e){
+            return ResponseHandler.responseBuilder("An error has occurred", HttpStatus.UNAUTHORIZED,
+                    new ArrayList<>());
+        }
     }
-
-    public UserProfileResponse updateUserProfile(UserProfileRequest userProfileRequest) {
-        // Retrieve the currently authenticated user's details from the security context
-        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-
-        // Check if the user exists in the database based on the email (assuming email is the username)
-        User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-        // Update user information with the data from the userProfileRequest
-        user.setFirstname(userProfileRequest.getFirstname());
-        user.setLastname(userProfileRequest.getLastname());
-        user.setEmail(userProfileRequest.getEmail());
-        user.setPhone(userProfileRequest.getPhone());
-        user.setPassword(userProfileRequest.getPassword());
-        user.setPassword(new BCryptPasswordEncoder().encode(userProfileRequest.getPassword()));
-        // Update other user information as needed
-
-        // Save the updated user entity
-        userRepository.save(user);
-
-        // Construct and return a UserProfileResponse with updated user information
-        UserProfileResponse userProfileResponse = new UserProfileResponse();
-        userProfileResponse.setFirstname(user.getFirstname());
-        userProfileResponse.setLastname(user.getLastname());
-        userProfileResponse.setEmail(user.getEmail());
-        userProfileResponse.setPhone(user.getPhone());
-        // Add other profile information as needed
-        return userProfileResponse;
-    }
-
 }
 
 
