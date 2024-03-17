@@ -25,7 +25,6 @@ public class IdentityApplication implements CommandLineRunner {
 		User adminAccount = userRepository.findByRole(Role.ADMIN);
 		if (null == adminAccount){
 			User user = new User();
-
 			user.setEmail("admin@gmail.com");
 			user.setFirstname("admin");
 			user.setLastname("admin");

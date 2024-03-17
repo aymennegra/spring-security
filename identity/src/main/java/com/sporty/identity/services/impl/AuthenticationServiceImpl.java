@@ -1,12 +1,11 @@
 package com.sporty.identity.services.impl;
 
 import com.sporty.identity.dto.dtoRequests.RefreshTokenRequest;
-import com.sporty.identity.dto.dtoResponses.JwtAuthenticationResponse;
 import com.sporty.identity.dto.dtoRequests.SignInRequest;
 import com.sporty.identity.dto.dtoRequests.SignUpRequest;
+import com.sporty.identity.dto.dtoResponses.JwtAuthenticationResponse;
 import com.sporty.identity.dto.dtoResponses.SignInResponse;
 import com.sporty.identity.dto.dtoResponses.SignUpResponse;
-import com.sporty.identity.dto.dtoResponses.UserProfileResponse;
 import com.sporty.identity.entities.Role;
 import com.sporty.identity.entities.User;
 import com.sporty.identity.repository.UserRepository;
@@ -15,9 +14,6 @@ import com.sporty.identity.services.JWTService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 @Service
