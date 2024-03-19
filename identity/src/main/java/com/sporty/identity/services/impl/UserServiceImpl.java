@@ -64,15 +64,23 @@ public class UserServiceImpl implements UserService {
             User user = userRepository.findByEmail(userDetails.getUsername())
                     .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-            // Update user information with the data from the userProfileRequest
-            user.setFirstname(userProfileRequest.getFirstname());
-            user.setLastname(userProfileRequest.getLastname());
-            user.setEmail(userProfileRequest.getEmail());
-            user.setPhone(userProfileRequest.getPhone());
-            user.setPassword(userProfileRequest.getPassword());
-            user.setPassword(new BCryptPasswordEncoder().encode(userProfileRequest.getPassword()));
-            // Update other user information as needed
-
+            // Update user information with the data from the userProfileRequest if not null
+            if (userProfileRequest.getFirstname() != null) {
+                user.setFirstname(userProfileRequest.getFirstname());
+            }
+            if (userProfileRequest.getLastname() != null) {
+                user.setLastname(userProfileRequest.getLastname());
+            }
+            if (userProfileRequest.getEmail() != null) {
+                user.setEmail(userProfileRequest.getEmail());
+            }
+            if (userProfileRequest.getPhone() != null) {
+                user.setPhone(userProfileRequest.getPhone());
+            }
+            if (userProfileRequest.getPassword() != null) {
+                // Update password only if not null
+                user.setPassword(new BCryptPasswordEncoder().encode(userProfileRequest.getPassword()));
+            }
             // Save the updated user entity
             userRepository.save(user);
 

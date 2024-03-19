@@ -58,6 +58,16 @@ public class JWTServiceImpl implements JWTService {
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
+    public Date extractExpirationDate(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigninKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        return claims.getExpiration();
+    }
+
     private boolean isTokenExpired (String token){
         try {
             return extractClaim(token,Claims::getExpiration).before(new Date());

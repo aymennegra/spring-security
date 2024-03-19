@@ -21,6 +21,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.Optional;
 
 @Service
@@ -76,9 +78,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
             var user = userRepository.findByEmail(signInRequest.getEmail()).orElseThrow(() -> new IllegalArgumentException("Invalid Email or Password"));
             var jwt = jwtService.generateToken(user);
-            // var refreshToken = jwtService.generateRefreshToken(new HashMap<>(),user);
+            var refreshToken = jwtService.generateRefreshToken(new HashMap<>(),user);
+            Date expirationDate = jwtService.extractExpirationDate(jwt);
             SignInResponse jwtAuthenticationResponse = new SignInResponse();
             jwtAuthenticationResponse.setToken(jwt);
+            jwtAuthenticationResponse.setRefreshToken(refreshToken);
+            jwtAuthenticationResponse.setTokenExpirationDate(expirationDate);
             jwtAuthenticationResponse.setEmail(user.getEmail());
             return ResponseHandler.responseBuilder("Connected successfully", HttpStatus.OK,
                     jwtAuthenticationResponse);
