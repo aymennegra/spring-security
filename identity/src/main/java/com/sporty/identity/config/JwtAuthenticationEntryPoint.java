@@ -20,6 +20,6 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         // Set the response content type to application/json
         response.setContentType("application/json");
         // Write the response body with the desired message
-        response.getWriter().write("{\"code\": 401, \"message\": \"Token expired\"}");
+        response.getWriter().write("{\"code\": 401, \"message\": \"Unauthorized\"}");
     }
 }
