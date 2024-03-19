@@ -6,7 +6,7 @@ import java.util.Date;
 
 @Data
 public class SignInResponse {
-    private String token;
+    private String accessToken;
     private String refreshToken;
     private Date tokenExpirationDate;
     private String email;

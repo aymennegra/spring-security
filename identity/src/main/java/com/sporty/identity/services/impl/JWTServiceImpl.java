@@ -12,28 +12,42 @@ import org.springframework.stereotype.Service;
 import java.security.Key;
 import java.util.Date;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 @Service
 public class JWTServiceImpl implements JWTService {
 
+    private static final long REFRESH_TOKEN_VALIDITY = 100L * 365 * 24 * 3600 * 1000; // 1 year (in milliseconds)
+    private static final long ACESS_TOKEN_VALIDITY = 3600 * 1000; // 1 hour (in milliseconds)
+    private static final String REFRESH_TOKEN_ID_KEY = "refreshTokenId";
+
     //valid for 1 day
     public String generateToken(UserDetails userDetails){
         return Jwts.builder().setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 24))
+                .setExpiration(new Date(System.currentTimeMillis() + ACESS_TOKEN_VALIDITY))
                 .signWith(getSigninKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    //refresh token valid for 7 days
     @Override
     public String generateRefreshToken(Map<String, Object> extraClaims, UserDetails userDetails) {
-        return Jwts.builder().setClaims(extraClaims).setSubject(userDetails.getUsername())
+        extraClaims.put(REFRESH_TOKEN_ID_KEY, generateRefreshTokenId());
+        // Mark the token as unused initially
+        extraClaims.put("used", false);
+        return Jwts.builder()
+                .setClaims(extraClaims)
+                .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 604800000))
+                .setExpiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALIDITY))
                 .signWith(getSigninKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+    // Helper method to generate a unique refresh token id (you can implement your logic here)
+    private String generateRefreshTokenId() {
+        // Implement your logic to generate a unique refresh token id, e.g., UUID.randomUUID().toString()
+        return UUID.randomUUID().toString();
     }
 
     public String extractUserName(String token){

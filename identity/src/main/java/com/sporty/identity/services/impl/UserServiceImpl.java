@@ -25,24 +25,20 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDetailsService userDetailsService() {
-        return new UserDetailsService() {
-            @Override
-            public UserDetails loadUserByUsername(String username) {
-                return userRepository.findByEmail(username).orElseThrow(()-> new UsernameNotFoundException("User Not Found"));
-            }
-        };
+        return username -> userRepository.findByEmail(username).orElseThrow(()-> new UsernameNotFoundException("User Not Found"));
     }
 
     public ResponseEntity<Object> getUserProfile() {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         // Check if a user with the provided email already exists
-            try {// Retrieve the currently authenticated user's details from the security context
+            try {
+                // Retrieve the currently authenticated user's details from the security context
                 // Check if the user exists in the database based on the email (assuming email is the username)
                 User user = userRepository.findByEmail(userDetails.getUsername())
                         .orElseThrow(() -> new UsernameNotFoundException("User not found"));
                 // Construct UserProfileResponse from user details
                 UserProfileResponse userProfileResponse = new UserProfileResponse();
-                userProfileResponse.setId(String.valueOf(user.getId()));
+                userProfileResponse.setId(String.valueOf(user.getUser_id()));
                 userProfileResponse.setFirstname(user.getFirstname());
                 userProfileResponse.setLastname(user.getLastname());
                 userProfileResponse.setEmail(user.getEmail());

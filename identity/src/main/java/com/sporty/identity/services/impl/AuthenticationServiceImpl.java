@@ -7,8 +7,10 @@ import com.sporty.identity.dto.dtoResponses.JwtAuthenticationResponse;
 import com.sporty.identity.dto.dtoResponses.ResponseHandler;
 import com.sporty.identity.dto.dtoResponses.SignInResponse;
 import com.sporty.identity.dto.dtoResponses.SignUpResponse;
+import com.sporty.identity.entities.RefreshToken;
 import com.sporty.identity.entities.Role;
 import com.sporty.identity.entities.User;
+import com.sporty.identity.repository.RefreshTokenRepository;
 import com.sporty.identity.repository.UserRepository;
 import com.sporty.identity.services.AuthenticationService;
 import com.sporty.identity.services.JWTService;
@@ -33,6 +35,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JWTService jwtService;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private static final long REFRESH_TOKEN_VALIDITY = 1000 * 60 * 24; // 5 minutes (in milliseconds)
 
     public ResponseEntity<Object> signup(SignUpRequest signUpRequest) {
         // Check if a user with the provided email already exists
@@ -62,7 +66,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 signUpResponse.setLastname(signUpRequest.getLastname());
                 signUpResponse.setEmail(signUpRequest.getEmail());
                 signUpResponse.setPhone(signUpRequest.getPhone());
-                signUpResponse.setToken(jwt);
+                signUpResponse.setAccessToken(jwt);
                 return ResponseHandler.responseBuilder("user created", HttpStatus.OK,
                         signUpResponse);
             } catch (Exception e) {
@@ -76,32 +80,71 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken
                     (signInRequest.getEmail(), signInRequest.getPassword()));
 
-            var user = userRepository.findByEmail(signInRequest.getEmail()).orElseThrow(() -> new IllegalArgumentException("Invalid Email or Password"));
-            var jwt = jwtService.generateToken(user);
-            var refreshToken = jwtService.generateRefreshToken(new HashMap<>(),user);
+            User user = userRepository.findByEmail(signInRequest.getEmail())
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid Email or Password"));
+
+            RefreshToken refreshTokenEntity = user.getRefreshToken() != null ?
+                    refreshTokenRepository.findByToken(user.getRefreshToken())
+                            .orElseThrow(() -> new IllegalArgumentException("Refresh token not found")) :
+                    null;
+
+            String refreshToken = refreshTokenEntity != null && refreshTokenEntity.isUsed() ?
+                    jwtService.generateRefreshToken(new HashMap<>(), user) :
+                    user.getRefreshToken();
+
+            user.setRefreshToken(refreshToken);
+
+            if (refreshTokenEntity == null || refreshTokenEntity.isUsed()) {
+                refreshTokenEntity = new RefreshToken();
+                refreshTokenEntity.setUser(user);
+            }
+
+            refreshTokenEntity.setToken(refreshToken);
+            refreshTokenEntity.setExpirationDate(new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALIDITY));
+            refreshTokenEntity.setUsed(false); // Mark the token as unused initially
+            refreshTokenRepository.save(refreshTokenEntity);
+            userRepository.save(user);
+
+            String jwt = jwtService.generateToken(user);
             Date expirationDate = jwtService.extractExpirationDate(jwt);
+
             SignInResponse jwtAuthenticationResponse = new SignInResponse();
-            jwtAuthenticationResponse.setToken(jwt);
+            jwtAuthenticationResponse.setAccessToken(jwt);
             jwtAuthenticationResponse.setRefreshToken(refreshToken);
             jwtAuthenticationResponse.setTokenExpirationDate(expirationDate);
             jwtAuthenticationResponse.setEmail(user.getEmail());
-            return ResponseHandler.responseBuilder("Connected successfully", HttpStatus.OK,
-                    jwtAuthenticationResponse);
+
+            return ResponseHandler.responseBuilder("Connected successfully", HttpStatus.OK, jwtAuthenticationResponse);
         } catch (Exception e) {
             return ResponseHandler.responseBuilder("Invalid Email or Password", HttpStatus.UNAUTHORIZED, new ArrayList<>());
         }
     }
 
+
+
     public ResponseEntity<Object> refreshToken(RefreshTokenRequest refreshTokenRequest) {
-        String userEmail = jwtService.extractUserName(refreshTokenRequest.getToken());
-        User user = userRepository.findByEmail(userEmail).orElseThrow();
-        if (jwtService.isTokenValid(refreshTokenRequest.getToken(), user)) {
-            var jwt = jwtService.generateToken(user);
+        try {
+            String userEmail = jwtService.extractUserName(refreshTokenRequest.getToken());
+            User user = userRepository.findByEmail(userEmail)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            RefreshToken refreshTokenEntity = refreshTokenRepository.findByToken(refreshTokenRequest.getToken())
+                    .orElseThrow(() -> new IllegalArgumentException("Refresh token not found"));
+
+            if (refreshTokenEntity.isUsed()) {
+                throw new IllegalArgumentException("Refresh token has already been used");
+            }
+            // Validate expiration date if needed
+            refreshTokenEntity.setUsed(true); // Mark the token as used
+            refreshTokenRepository.save(refreshTokenEntity);
+
+            String newAccessToken = jwtService.generateToken(user);
+
             JwtAuthenticationResponse jwtAuthenticationResponse = new JwtAuthenticationResponse();
-            jwtAuthenticationResponse.setRefreshToken(jwt);
-            return ResponseHandler.responseBuilder("Token refreshed successfully", HttpStatus.OK,
-                    jwtAuthenticationResponse);
+            jwtAuthenticationResponse.setRefreshToken(newAccessToken);
+            return ResponseHandler.responseBuilder("Token refreshed successfully", HttpStatus.OK, jwtAuthenticationResponse);
+        } catch (Exception e) {
+            return ResponseHandler.responseBuilder("Invalid refresh token", HttpStatus.UNAUTHORIZED, new ArrayList<>());
         }
-        return ResponseHandler.responseBuilder("Unauthorized", HttpStatus.UNAUTHORIZED, new ArrayList<>());
     }
 }
