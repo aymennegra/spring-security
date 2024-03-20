@@ -140,7 +140,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 
     public ResponseEntity<Object> refreshToken(RefreshTokenRequest refreshTokenRequest) {
-        String extractedRefreshtokenId;
         try {
             User user = userRepository.findByRefreshToken(refreshTokenRequest.getRefreshToken())
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -151,13 +150,21 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             if (refreshTokenEntity.isUsed()) {
                 throw new IllegalArgumentException("Refresh token has already been used");
             }
+            //generate new access token
+            String newAccessToken = jwtService.generateToken(user);
+            // Generate a new refresh token
+            String newRefreshToken = jwtService.generateRefreshToken(new HashMap<>(), user);
+
             // Validate expiration date if needed
             refreshTokenEntity.setUsed(true); // Mark the token as used
+            refreshTokenEntity.setToken(jwtService.extractRefreshTokenId(newRefreshToken));
             refreshTokenRepository.save(refreshTokenEntity);
 
-            String newAccessToken = jwtService.generateToken(user);
+            user.setRefreshToken(jwtService.extractRefreshTokenId(newRefreshToken));
+            userRepository.save(user);
+
             JwtAuthenticationResponse jwtAuthenticationResponse = new JwtAuthenticationResponse();
-            jwtAuthenticationResponse.setRefreshToken(refreshTokenEntity.getToken());
+            jwtAuthenticationResponse.setRefreshToken(user.getRefreshToken());
             jwtAuthenticationResponse.setAccessToken(newAccessToken);
             return ResponseHandler.responseBuilder("Token refreshed successfully", HttpStatus.OK, jwtAuthenticationResponse);
         } catch (Exception e) {
