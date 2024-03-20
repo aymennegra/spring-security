@@ -25,8 +25,5 @@ public class RefreshToken {
     @Column(nullable = false)
     private Date expirationDate;
 
-    @Column(nullable = false)
-    private boolean used; // Indicates whether the refresh token has been used
-
     // Getters and setters
 }

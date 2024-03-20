@@ -2,6 +2,7 @@ package com.sporty.identity.services.impl;
 
 import com.sporty.identity.dto.dtoRequests.UserProfileRequest;
 import com.sporty.identity.dto.dtoResponses.ResponseHandler;
+import com.sporty.identity.dto.dtoResponses.UpdateProfileResponse;
 import com.sporty.identity.dto.dtoResponses.UserProfileResponse;
 import com.sporty.identity.entities.User;
 import com.sporty.identity.repository.UserRepository;
@@ -81,7 +82,7 @@ public class UserServiceImpl implements UserService {
             userRepository.save(user);
 
             // Construct and return a UserProfileResponse with updated user information
-            UserProfileResponse userProfileResponse = new UserProfileResponse();
+            UpdateProfileResponse userProfileResponse = new UpdateProfileResponse();
             userProfileResponse.setFirstname(user.getFirstname());
             userProfileResponse.setLastname(user.getLastname());
             userProfileResponse.setEmail(user.getEmail());
