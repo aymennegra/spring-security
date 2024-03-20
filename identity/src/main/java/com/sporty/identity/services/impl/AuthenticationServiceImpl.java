@@ -76,50 +76,64 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     public ResponseEntity<Object> signin(SignInRequest signInRequest) {
+        String refreshToken;
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken
                     (signInRequest.getEmail(), signInRequest.getPassword()));
 
-            User user = userRepository.findByEmail(signInRequest.getEmail())
+            var user = userRepository.findByEmail(signInRequest.getEmail())
                     .orElseThrow(() -> new IllegalArgumentException("Invalid Email or Password"));
 
-            RefreshToken refreshTokenEntity = user.getRefreshToken() != null ?
-                    refreshTokenRepository.findByToken(user.getRefreshToken())
-                            .orElseThrow(() -> new IllegalArgumentException("Refresh token not found")) :
-                    null;
-
-            String refreshToken = refreshTokenEntity != null && refreshTokenEntity.isUsed() ?
-                    jwtService.generateRefreshToken(new HashMap<>(), user) :
-                    user.getRefreshToken();
-
-            user.setRefreshToken(refreshToken);
-
-            if (refreshTokenEntity == null || refreshTokenEntity.isUsed()) {
-                refreshTokenEntity = new RefreshToken();
+            // Generate a refresh token if the user doesn't have one already
+            if (user.getRefreshToken() == null) {
+                refreshToken = jwtService.generateRefreshToken(new HashMap<>(), user);
+                user.setRefreshToken(refreshToken);
+                userRepository.save(user);
+                // Save the refresh token entity into the database
+                RefreshToken refreshTokenEntity = new RefreshToken();
+                refreshTokenEntity.setToken(refreshToken);
                 refreshTokenEntity.setUser(user);
+                refreshTokenEntity.setExpirationDate(new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALIDITY));
+                refreshTokenEntity.setUsed(false); // Mark the token as unused initially
+                refreshTokenRepository.save(refreshTokenEntity);
+            }else {
+                RefreshToken refreshTokenEntity = refreshTokenRepository.findByToken(user.getRefreshToken())
+                        .orElseThrow(() -> new IllegalArgumentException("Refresh token not found"));
+
+                if (refreshTokenEntity.isUsed()) {
+                    // Generate a new refresh token
+                    refreshToken = jwtService.generateRefreshToken(new HashMap<>(), user);
+                    user.setRefreshToken(refreshToken);
+                    refreshTokenEntity.setToken(refreshToken);
+                    refreshTokenEntity.setUsed(false);
+                    refreshTokenEntity.setExpirationDate(new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALIDITY));
+                    refreshTokenRepository.save(refreshTokenEntity);
+                    userRepository.save(user);
+                } else {
+                    // Use the existing refresh token
+                    user.setRefreshToken(user.getRefreshToken());
+                }
             }
 
-            refreshTokenEntity.setToken(refreshToken);
-            refreshTokenEntity.setExpirationDate(new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALIDITY));
-            refreshTokenEntity.setUsed(false); // Mark the token as unused initially
-            refreshTokenRepository.save(refreshTokenEntity);
-            userRepository.save(user);
+            // Generate a new access token
+            var jwt = jwtService.generateToken(user);
 
-            String jwt = jwtService.generateToken(user);
+            // Extract expiration date of the access token
             Date expirationDate = jwtService.extractExpirationDate(jwt);
 
+            // Prepare the response
             SignInResponse jwtAuthenticationResponse = new SignInResponse();
             jwtAuthenticationResponse.setAccessToken(jwt);
-            jwtAuthenticationResponse.setRefreshToken(refreshToken);
+            jwtAuthenticationResponse.setRefreshToken(user.getRefreshToken());
             jwtAuthenticationResponse.setTokenExpirationDate(expirationDate);
             jwtAuthenticationResponse.setEmail(user.getEmail());
 
-            return ResponseHandler.responseBuilder("Connected successfully", HttpStatus.OK, jwtAuthenticationResponse);
+            return ResponseHandler.responseBuilder("Connected successfully", HttpStatus.OK,
+                    jwtAuthenticationResponse);
         } catch (Exception e) {
             return ResponseHandler.responseBuilder("Invalid Email or Password", HttpStatus.UNAUTHORIZED, new ArrayList<>());
         }
     }
-
 
 
     public ResponseEntity<Object> refreshToken(RefreshTokenRequest refreshTokenRequest) {
