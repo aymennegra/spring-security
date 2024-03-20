@@ -150,14 +150,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             if (refreshTokenEntity.isUsed()) {
                 throw new IllegalArgumentException("Refresh token has already been used");
             }
+            // Validate expiration date if needed
+            refreshTokenEntity.setUsed(true); // Mark the token as used
             //generate new access token
             String newAccessToken = jwtService.generateToken(user);
             // Generate a new refresh token
             String newRefreshToken = jwtService.generateRefreshToken(new HashMap<>(), user);
-
-            // Validate expiration date if needed
-            refreshTokenEntity.setUsed(true); // Mark the token as used
             refreshTokenEntity.setToken(jwtService.extractRefreshTokenId(newRefreshToken));
+            refreshTokenEntity.setUsed(false);
+            refreshTokenEntity.setExpirationDate(new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALIDITY));
             refreshTokenRepository.save(refreshTokenEntity);
 
             user.setRefreshToken(jwtService.extractRefreshTokenId(newRefreshToken));
