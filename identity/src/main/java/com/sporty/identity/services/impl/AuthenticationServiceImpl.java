@@ -77,6 +77,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     public ResponseEntity<Object> signin(SignInRequest signInRequest) {
         String refreshToken;
+        String extractedRefreshtokenId;
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken
                     (signInRequest.getEmail(), signInRequest.getPassword()));
@@ -87,11 +88,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             // Generate a refresh token if the user doesn't have one already
             if (user.getRefreshToken() == null) {
                 refreshToken = jwtService.generateRefreshToken(new HashMap<>(), user);
-                user.setRefreshToken(refreshToken);
+                extractedRefreshtokenId = jwtService.extractRefreshTokenId(refreshToken);
+                user.setRefreshToken(extractedRefreshtokenId);
                 userRepository.save(user);
                 // Save the refresh token entity into the database
                 RefreshToken refreshTokenEntity = new RefreshToken();
-                refreshTokenEntity.setToken(refreshToken);
+                refreshTokenEntity.setToken(extractedRefreshtokenId);
                 refreshTokenEntity.setUser(user);
                 refreshTokenEntity.setExpirationDate(new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALIDITY));
                 refreshTokenEntity.setUsed(false); // Mark the token as unused initially
@@ -103,8 +105,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 if (refreshTokenEntity.isUsed()) {
                     // Generate a new refresh token
                     refreshToken = jwtService.generateRefreshToken(new HashMap<>(), user);
-                    user.setRefreshToken(refreshToken);
-                    refreshTokenEntity.setToken(refreshToken);
+                    extractedRefreshtokenId = jwtService.extractRefreshTokenId(refreshToken);
+                    user.setRefreshToken(extractedRefreshtokenId);
+                    refreshTokenEntity.setToken(extractedRefreshtokenId);
                     refreshTokenEntity.setUsed(false);
                     refreshTokenEntity.setExpirationDate(new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALIDITY));
                     refreshTokenRepository.save(refreshTokenEntity);
@@ -137,12 +140,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 
     public ResponseEntity<Object> refreshToken(RefreshTokenRequest refreshTokenRequest) {
+        String extractedRefreshtokenId;
         try {
-            String userEmail = jwtService.extractUserName(refreshTokenRequest.getToken());
-            User user = userRepository.findByEmail(userEmail)
+            User user = userRepository.findByRefreshToken(refreshTokenRequest.getRefreshToken())
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            RefreshToken refreshTokenEntity = refreshTokenRepository.findByToken(refreshTokenRequest.getToken())
+            RefreshToken refreshTokenEntity = refreshTokenRepository.findByToken(refreshTokenRequest.getRefreshToken())
                     .orElseThrow(() -> new IllegalArgumentException("Refresh token not found"));
 
             if (refreshTokenEntity.isUsed()) {
@@ -153,9 +156,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             refreshTokenRepository.save(refreshTokenEntity);
 
             String newAccessToken = jwtService.generateToken(user);
-
             JwtAuthenticationResponse jwtAuthenticationResponse = new JwtAuthenticationResponse();
-            jwtAuthenticationResponse.setRefreshToken(newAccessToken);
+            jwtAuthenticationResponse.setRefreshToken(refreshTokenEntity.getToken());
+            jwtAuthenticationResponse.setAccessToken(newAccessToken);
             return ResponseHandler.responseBuilder("Token refreshed successfully", HttpStatus.OK, jwtAuthenticationResponse);
         } catch (Exception e) {
             return ResponseHandler.responseBuilder("Invalid refresh token", HttpStatus.UNAUTHORIZED, new ArrayList<>());

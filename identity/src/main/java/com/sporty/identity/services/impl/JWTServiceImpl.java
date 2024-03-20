@@ -46,7 +46,7 @@ public class JWTServiceImpl implements JWTService {
     }
     // Helper method to generate a unique refresh token id (you can implement your logic here)
     private String generateRefreshTokenId() {
-        // Implement your logic to generate a unique refresh token id, e.g., UUID.randomUUID().toString()
+        // Generate a random UUID and return it as a string
         return UUID.randomUUID().toString();
     }
 
@@ -80,6 +80,17 @@ public class JWTServiceImpl implements JWTService {
                 .getBody();
 
         return claims.getExpiration();
+    }
+
+    public String extractRefreshTokenId(String refreshToken) {
+        // Parse the JWT and extract its claims
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigninKey())
+                .build()
+                .parseClaimsJws(refreshToken)
+                .getBody();
+        // Retrieve the refresh token ID from the claims
+        return (String) claims.get("refreshTokenId");
     }
 
     private boolean isTokenExpired (String token){
