@@ -36,7 +36,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final JWTService jwtService;
     private final RefreshTokenRepository refreshTokenRepository;
-    private static final long REFRESH_TOKEN_VALIDITY = 1000 * 60 * 24; // 5 minutes (in milliseconds)
+    private static final long REFRESH_TOKEN_VALIDITY = 100L * 365 * 24 * 3600 * 1000; // 5 minutes (in milliseconds)
 
     public ResponseEntity<Object> signup(SignUpRequest signUpRequest) {
         String refreshToken;
@@ -90,8 +90,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     public ResponseEntity<Object> signin(SignInRequest signInRequest) {
-        String refreshToken;
-        String extractedRefreshtokenId;
+
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken
                     (signInRequest.getEmail(), signInRequest.getPassword()));
@@ -99,8 +98,17 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             var user = userRepository.findByEmail(signInRequest.getEmail())
                     .orElseThrow(() -> new IllegalArgumentException("Invalid Email or Password"));
 
+            RefreshToken refreshTokenEntity = refreshTokenRepository.findByUser(user)
+                    .orElseThrow(() -> new IllegalArgumentException("Refresh token not found"));
+            // Generate a new refresh token
+            String newRefreshToken = jwtService.generateRefreshToken(new HashMap<>(), user);
             // Generate a new access token
             var jwt = jwtService.generateToken(user);
+            refreshTokenEntity.setToken(jwtService.extractRefreshTokenId(newRefreshToken));
+            refreshTokenEntity.setExpirationDate(new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALIDITY));
+            refreshTokenRepository.save(refreshTokenEntity);
+            user.setRefreshToken(jwtService.extractRefreshTokenId(newRefreshToken));
+            userRepository.save(user);
 
             // Extract expiration date of the access token
             Date expirationDate = jwtService.extractExpirationDate(jwt);
