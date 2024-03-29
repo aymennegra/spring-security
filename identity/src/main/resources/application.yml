@@ -2,17 +2,6 @@ spring:
   application:
     name: mywedding-app
 
-  security:
-    oauth2:
-      client:
-        registration:
-          facebook:
-            clientId: 1101387697572126
-            clientSecret: c8b6b199aa15d4abbd9e2a2ffc0b523e
-            scope:
-              - email
-              - public_profile
-
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/sporty
