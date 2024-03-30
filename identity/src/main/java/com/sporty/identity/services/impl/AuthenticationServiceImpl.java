@@ -128,8 +128,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     public ResponseEntity<Object> signinWithFacebook(Principal principal) {
         try {
-            Map<String, Object> details = (Map<String, Object>)
-                    ((OAuth2Authentication) principal).getUserAuthentication().getDetails();
+            Map<String, Object> details;
+            try {
+                details = (Map<String, Object>)
+                        ((OAuth2Authentication) principal).getUserAuthentication().getDetails();
+            } catch (Exception e) {
+                return ResponseHandler.responseBuilder("Failed to login using Facebook", HttpStatus.UNAUTHORIZED,
+                        new ArrayList<>());
+            }
             SignUpResponse getFacebookDataResponse = new SignUpResponse();
             getFacebookDataResponse.setEmail((String)details.get("email"));
             getFacebookDataResponse.setFirstname((String)details.get("first_name"));
