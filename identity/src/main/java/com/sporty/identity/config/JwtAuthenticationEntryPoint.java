@@ -6,20 +6,18 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
+import javax.servlet.ServletException;
 import java.io.IOException;
 
 @Component
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
-
     @Override
-    public void commence(HttpServletRequest request,
-                         HttpServletResponse response,
-                         AuthenticationException authException) throws IOException {
+    public void commence(javax.servlet.http.HttpServletRequest httpServletRequest, javax.servlet.http.HttpServletResponse httpServletResponse, AuthenticationException e) throws IOException, ServletException {
         // Set the response status code to 401 (Unauthorized)
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        httpServletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         // Set the response content type to application/json
-        response.setContentType("application/json");
+        httpServletResponse.setContentType("application/json");
         // Write the response body with the desired message
-        response.getWriter().write("{\"code\": 401, \"message\": \"Unauthorized\"}");
+        httpServletResponse.getWriter().write("{\"code\": 401, \"message\": \"Unauthorized\"}");
     }
 }

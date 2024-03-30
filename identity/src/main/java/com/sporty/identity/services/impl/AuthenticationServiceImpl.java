@@ -20,12 +20,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.provider.OAuth2Authentication;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Optional;
+import java.security.Principal;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -73,7 +72,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 refreshTokenEntity.setExpirationDate(new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALIDITY));
                 refreshTokenRepository.save(refreshTokenEntity);
                 //get response
-                var jwt = jwtService.generateToken(user);
+                String jwt = jwtService.generateToken(user);
                 SignUpResponse signUpResponse = new SignUpResponse();
                 signUpResponse.setFirstname(signUpRequest.getFirstname());
                 signUpResponse.setLastname(signUpRequest.getLastname());
@@ -95,7 +94,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken
                     (signInRequest.getEmail(), signInRequest.getPassword()));
 
-            var user = userRepository.findByEmail(signInRequest.getEmail())
+            User user = userRepository.findByEmail(signInRequest.getEmail())
                     .orElseThrow(() -> new IllegalArgumentException("Invalid Email or Password"));
 
             RefreshToken refreshTokenEntity = refreshTokenRepository.findByUser(user)
@@ -103,7 +102,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             // Generate a new refresh token
             String newRefreshToken = jwtService.generateRefreshToken(new HashMap<>(), user);
             // Generate a new access token
-            var jwt = jwtService.generateToken(user);
+            String jwt = jwtService.generateToken(user);
             refreshTokenEntity.setToken(jwtService.extractRefreshTokenId(newRefreshToken));
             refreshTokenEntity.setExpirationDate(new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALIDITY));
             refreshTokenRepository.save(refreshTokenEntity);
@@ -127,6 +126,21 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
     }
 
+    public ResponseEntity<Object> signinWithFacebook(Principal principal) {
+        try {
+            Map<String, Object> details = (Map<String, Object>)
+                    ((OAuth2Authentication) principal).getUserAuthentication().getDetails();
+            SignUpResponse getFacebookDataResponse = new SignUpResponse();
+            getFacebookDataResponse.setEmail((String)details.get("email"));
+            getFacebookDataResponse.setFirstname((String)details.get("first_name"));
+            getFacebookDataResponse.setLastname((String)details.get("last_name"));
+            return ResponseHandler.responseBuilder("Connected successfully", HttpStatus.OK,
+                    getFacebookDataResponse);
+        }catch (Exception e){
+            return ResponseHandler.responseBuilder("Failed to login using Facebook", HttpStatus.UNAUTHORIZED,
+                    new ArrayList<>());
+        }
+    }
 
     public ResponseEntity<Object> refreshToken(RefreshTokenRequest refreshTokenRequest) {
         try {
