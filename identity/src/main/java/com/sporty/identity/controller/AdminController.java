@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AdminController {
 
-    @GetMapping
+    @GetMapping(path = "/test")
     public ResponseEntity<String> sayHello(){
         return ResponseEntity.ok("Hi admin");
     }

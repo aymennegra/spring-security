@@ -1,10 +1,10 @@
 package com.sporty.identity.dto.dtoRequests;
 
+
 import lombok.Data;
 
 @Data
-public class SignUpRequest {
-
+public class UserProfileRequest {
     private String firstname;
     private String lastname;
     private String email;
